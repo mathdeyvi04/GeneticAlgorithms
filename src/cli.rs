@@ -11,4 +11,8 @@ pub struct Args {
     /// Altura janela 
     #[arg(long, default_value_t = 600)]
     pub height: u32,
+
+    /// Número de Indivíduos em cada População 
+    #[arg(long, default_value_t = 100)]
+    pub population: usize
 }
