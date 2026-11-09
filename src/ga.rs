@@ -83,7 +83,12 @@ impl Population {
 
     /// Registramos informações da geração assexuada e avançamos a evolução
     #[inline]
-    fn snapshot_stats(&self, ctx: &FitnessContext) -> (Individual, GenerationStats) {
+    fn snapshot_stats(
+        &self,
+        ctx: &FitnessContext,
+        mutation: f32,
+        parent_pool: Option<usize>,
+    ) -> (Individual, GenerationStats) {
         let n = self.individuals.len();
         let mut best = self.individuals[0];
         let mut best_fit = best.fitness(ctx);
@@ -101,7 +106,16 @@ impl Population {
         let variance = (sum_sq / n as f32) - mean * mean;
         let std_dev = variance.max(0.0).sqrt();
     
-        (best, GenerationStats { generation: 0, mean_fitness: mean, std_dev })
+        (
+            best,
+            GenerationStats {
+                generation: 0,
+                mean_fitness: mean,
+                std_dev,
+                mutation: mutation.abs(),
+                parent_pool,
+            },
+        )
     }
 
     /// Evoluimos para a próxima geração
@@ -113,7 +127,7 @@ impl Population {
         height: f32,
         rng: &mut impl RngExt,
     ) -> GenerationStats {
-        let (best, stats) = self.snapshot_stats(ctx);
+        let (best, stats) = self.snapshot_stats(ctx, mutation_strength, None);
         for ind in self.individuals.iter_mut() {
             *ind = best.mutated(mutation_strength, width, height, rng);
         }
@@ -179,7 +193,13 @@ impl Population {
             // guarda a geração anterior, pronta para ser limpa e reutilizada.
             std::mem::swap(individuals, scratch_next);
     
-            GenerationStats { generation: 0, mean_fitness: mean, std_dev }
+            GenerationStats {
+                generation: 0,
+                mean_fitness: mean,
+                std_dev,
+                mutation: mutation_strength.abs(),
+                parent_pool: Some(pool_size),
+            }
         }
 
     /// Itera sobre os indivíduos sem expor o `Vec` interno.
