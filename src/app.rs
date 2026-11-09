@@ -87,6 +87,8 @@ impl eframe::App for App {
                 let sx = rect.width() / w;
                 let sy = rect.height() / h;
 
+                let fit_ctx = FitnessContext::new(self.target_x, self.target_y, self.max_dist_sq);
+
                 if let Some(p) = ctx.input(|i| i.pointer.hover_pos()) {
                     if rect.contains(p) {
                         self.target_x = ((p.x - rect.min.x) / sx).clamp(0.0, w);
@@ -94,7 +96,16 @@ impl eframe::App for App {
                     }
                 }
 
-                let fit_ctx = FitnessContext::new(self.target_x, self.target_y, self.max_dist_sq);
+                if ctx.input(|i| i.pointer.primary_clicked()) {
+                    self.population.evolve_from_best(
+                       &fit_ctx,
+                       self.args.mutation,
+                       w,
+                       h, 
+                       &mut self.rng
+                    );
+                }
+
                 for ind in self.population.iter() {
                     let pos = rect.min + egui::vec2(ind.x * sx, ind.y * sy);
                     let t = ind.fitness(&fit_ctx);

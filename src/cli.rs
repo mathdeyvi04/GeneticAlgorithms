@@ -14,5 +14,9 @@ pub struct Args {
 
     /// Número de Indivíduos em cada População 
     #[arg(long, default_value_t = 100)]
-    pub population: usize
+    pub population: usize,
+
+    /// Intensidade de mutação, em unidades do espaço de busca (por gene).
+    #[arg(long, default_value_t = 20.0)]
+    pub mutation: f32,
 }

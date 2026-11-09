@@ -36,6 +36,21 @@ impl Individual {
 
         1.0 - (d_sq / ctx.max_dist_sq).clamp(0.0, 1.0)
     }
+
+    /// Realizamos a reprodução assexual da população
+    pub fn mutated(
+        &self,
+        strength: f32,
+        width: f32,
+        height: f32,
+        rng: &mut impl RngExt
+    ) -> Self {
+        let s = strength.abs();
+        Self {
+            x: (self.x + rng.random_range(-s..s)).clamp(0.0, width),
+            y: (self.y + rng.random_range(-s..s)).clamp(0.0, height)
+        }
+    }
 }
 
 /// Um conjunto de indivíduos que formam uma geração da população.
@@ -52,6 +67,38 @@ impl Population {
                 .collect()
         }
     }
+
+    /// Melhor Indivíduo sob este contexto
+    pub fn best(&self, ctx: &FitnessContext) -> Individual {
+        let mut iter = self.individuals.iter();
+        let mut best = *iter.next().expect("população vazia");
+        let mut best_fit = best.fitness(ctx);
+        for &ind in iter {
+            let f = ind.fitness(ctx);
+            if f > best_fit {
+                best = ind;
+                best_fit = f;
+            }
+        }
+        best
+    }
+
+    /// Evoluimos para a próxima geração
+    pub fn evolve_from_best(
+        &mut self,
+        ctx: &FitnessContext,
+        mutation_strength: f32,
+        width: f32,
+        height: f32,
+        rng: &mut impl RngExt
+    ) {
+        let best = self.best(ctx);
+        for ind in self.individuals.iter_mut() {
+            *ind = best.mutated(mutation_strength, width, height, rng);
+        }
+    }
+
+    
 
     /// Itera sobre os indivíduos sem expor o `Vec` interno.
     pub fn iter(&self) -> impl Iterator<Item = &Individual> + '_ {
