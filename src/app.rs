@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use eframe::egui;
 use egui::Color32;
 use rand::rngs::StdRng;
@@ -5,6 +7,7 @@ use rand::SeedableRng;
 
 use crate::cli::Args;
 use crate::ga::{FitnessContext, POINT_RADIUS, Population};
+use crate::stats::append_to_csv;
 
 const BACKGROUND_COLOR: Color32 = Color32::from_rgb(38, 38, 38);
 
@@ -36,7 +39,9 @@ pub struct App {
     rng: StdRng,
     target_x: f32,
     target_y: f32,
-    max_dist_sq: f32
+    max_dist_sq: f32,
+    generation: usize,
+    csv_path: PathBuf
 }
 
 impl App {
@@ -55,6 +60,12 @@ impl App {
         let target_y = h * 0.5;
 
         let max_dist_sq = FitnessContext::calc_max_dist_sq(target_x, target_y, w, h);
+
+        let csv_path = PathBuf::from("evolution.csv");
+        
+        if let Err(e) = std::fs::File::create(&csv_path) {
+            eprintln!("Aviso: não foi possível limpar {:?}: {}", csv_path, e);
+        }
         
         Self {
             args, 
@@ -62,7 +73,9 @@ impl App {
             rng,
             target_x,
             target_y,
-            max_dist_sq
+            max_dist_sq,
+            generation: 0,
+            csv_path
         }
     }
 }
@@ -97,13 +110,20 @@ impl eframe::App for App {
                 }
 
                 if ctx.input(|i| i.pointer.primary_clicked()) {
-                    self.population.evolve_from_best(
+                    let mut stats = self.population.evolve_from_best(
                        &fit_ctx,
                        self.args.mutation,
                        w,
                        h, 
                        &mut self.rng
                     );
+
+                    stats.generation = self.generation;
+                    self.generation += 1;
+
+                    if let Err(e) = append_to_csv(&self.csv_path, &stats) {
+                        eprintln!("Erro ao salvar em csv: {}", e);
+                    }
                 }
 
                 for ind in self.population.iter() {

@@ -1,5 +1,7 @@
 use rand::RngExt;
 
+use crate::stats::GenerationStats;
+
 /// Raio visual (em pixels) usado para desenhar cada indivíduo na tela.
 pub const POINT_RADIUS: f32 = 3.0;
 
@@ -68,21 +70,6 @@ impl Population {
         }
     }
 
-    /// Melhor Indivíduo sob este contexto
-    pub fn best(&self, ctx: &FitnessContext) -> Individual {
-        let mut iter = self.individuals.iter();
-        let mut best = *iter.next().expect("população vazia");
-        let mut best_fit = best.fitness(ctx);
-        for &ind in iter {
-            let f = ind.fitness(ctx);
-            if f > best_fit {
-                best = ind;
-                best_fit = f;
-            }
-        }
-        best
-    }
-
     /// Evoluimos para a próxima geração
     pub fn evolve_from_best(
         &mut self,
@@ -91,10 +78,46 @@ impl Population {
         width: f32,
         height: f32,
         rng: &mut impl RngExt
-    ) {
-        let best = self.best(ctx);
+    ) -> GenerationStats {
+
+        let n = self.individuals.len();
+
+        // Inicializamos com o primeiro elemento
+        let mut best = self.individuals[0];
+        let mut best_fit = best.fitness(ctx);
+        
+        let mut sum = best_fit;
+        let mut sum_sq = best_fit * best_fit;
+
+        for &ind in self.individuals.iter().skip(1) {
+            let f = ind.fitness(ctx);
+
+            sum += f;
+            sum_sq += f * f;
+
+            if f > best_fit {
+                best = ind;
+                best_fit = f;
+            }
+        }
+
+        let mean = sum / n as f32;
+        let variance = (sum_sq / n as f32) - (mean * mean);
+        let std_dev = variance.max(0.0).sqrt();
+
         for ind in self.individuals.iter_mut() {
-            *ind = best.mutated(mutation_strength, width, height, rng);
+            *ind = best.mutated(
+                mutation_strength,
+                width,
+                height,
+                rng
+            );
+        }
+
+        GenerationStats {
+            generation: 0,
+            mean_fitness: mean,
+            std_dev
         }
     }
 

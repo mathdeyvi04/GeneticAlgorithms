@@ -1,6 +1,7 @@
 mod app;
 mod cli;
 mod ga;
+mod stats;
 
 use clap::Parser;
 
